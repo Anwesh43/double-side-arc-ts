@@ -131,7 +131,7 @@ class Animator {
         }
     }
 
-    stop(cb : Function) {
+    stop() {
         if (this.animated) {
             this.animated = false
             clearInterval(this.interval)
@@ -204,5 +204,27 @@ class DoubleSideP {
 
     startUpdating(cb : Function) {
         this.curr.startUpdating(cb)
+    }
+}
+
+class Renderer {
+
+    dsp : DoubleSideP = new DoubleSideP()
+    animator : Animator = new Animator()
+
+    render(context : CanvasRenderingContext2D) {
+        this.dsp.draw(context)
+    }
+
+    handleTap(cb : Function) {
+        this.dsp.startUpdating(() => {
+            this.animator.start(() => {
+                cb()
+                this.dsp.update(() => {
+                    this.animator.stop()
+                    cb()
+                })
+            })
+        })
     }
 }
