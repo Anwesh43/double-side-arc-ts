@@ -6,13 +6,13 @@ const scDiv : number = 0.51
 const strokeFactor : number = 90
 const color : string = "#673AB7"
 const backColor : string = "#BDBDBD"
-const sizeFactor : number = 3
+const sizeFactor : number = 2
 
 const maxScale : Function = (scale : number, i : number, n : number) : number => {
-    return Math.max(0, scale - i / n)
+    return Math.max(0, scale - (i / n))
 }
 const divideScale : Function = (scale : number, i : number, n : number) : number => {
-    return Math.min(1/n, scale - i / n) * n
+    return Math.min(1/n, maxScale(scale, i, n)) * n
 }
 const scaleFactor : Function = (scale : number) : number => Math.floor(scale / scDiv)
 const mirrorValue : Function = (scale : number, a : number, b : number) => {
@@ -23,20 +23,16 @@ const updateScale : Function = (scale : number, dir : number, a : number, b : nu
     return mirrorValue(scale, a, b) * dir * scGap
 }
 
-const drawArc : Function = (context : CanvasRenderingContext2D, y : number, r : number, start : number, end : number, scale : number) => {
-    var deg : number = start + (end - start) * scale
-    var k : number = 0
-    var dir = 1
-    if (start > end) {
-        dir = -1
+const drawArc : Function = (context : CanvasRenderingContext2D, y : number, r : number, start : number, end : number, dir : number) => {
+    if (start == end) {
+        return
     }
     context.save()
     context.translate(0, y)
     context.beginPath()
     context.moveTo(r * Math.cos(start * Math.PI/180), r * Math.sin(start * Math.PI/180))
-    while (k != deg) {
-        context.lineTo(r * Math.cos(k * Math.PI/180), r * Math.cos(k * Math.PI/180))
-        k += dir
+    for (var i = start; i <= end; i++) {
+        context.lineTo(r * Math.cos(i * Math.PI/180) * dir, r * Math.sin(i * Math.PI/180))
     }
     context.stroke()
     context.restore()
@@ -54,6 +50,7 @@ const drawDSPNode : Function = (context : CanvasRenderingContext2D, i : number, 
     var deg : number = -90
     context.save()
     context.translate(gap * (i + 1), h / 2)
+    context.rotate((Math.PI / 2) * sc2)
     context.beginPath()
     context.moveTo(0, -size)
     context.lineTo(0, size)
@@ -61,8 +58,10 @@ const drawDSPNode : Function = (context : CanvasRenderingContext2D, i : number, 
     for (var j = 0; j < noOfP; j++) {
         const si : number = j % 2
         const sf : number = 1 - 2 * si
-        const sc : number = divideScale(scale, j, noOfP)
-        drawArc(context, -size + r + r * j, r, deg, deg + 180 * sf, sc * sf)
+        const sc : number = divideScale(sc1, j, noOfP)
+        const endDeg : number = deg + 180
+        const endScDeg : number = deg + (endDeg - deg) * sc
+        drawArc(context, -size + r + 2 * r * j, r, deg, endScDeg, sf)
     }
     context.restore()
 }
@@ -82,6 +81,7 @@ class DoubleSidePStage {
     render() {
         this.context.fillStyle = backColor
         this.context.fillRect(0, 0, w, h)
+        console.log("starting to render")
         this.renderer.render(this.context)
     }
 
@@ -157,13 +157,17 @@ class DSPNode {
             this.next = new DSPNode(this.i + 1)
             this.next.prev = this
         }
+        console.log(this.next)
+        console.log(this.prev)
     }
 
     draw(context : CanvasRenderingContext2D) {
+        console.log(`starting to draw ${this.i}`)
         drawDSPNode(context, this.i, this.state.scale)
         if (this.next) {
             this.next.draw(context)
         }
+        console.log(`drawn ${this.i}`)
     }
 
     update(cb : Function) {
